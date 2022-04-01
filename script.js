@@ -1,0 +1,232 @@
+"use strict"
+let vertexShaderText = 
+[
+'precision mediump float;',
+'',
+'attribute vec2 vertPosition;',
+'attribute vec3 vertColor;',
+'uniform vec2 translation;',
+'uniform vec2 rotation;',
+'varying vec3 fragColor;',
+'',
+'void main()',
+'{',
+'  vec2 rotatedPos = vec2(vertPosition.x * rotation.y + vertPosition.y * rotation.x, vertPosition.y * rotation.y - vertPosition.x * rotation.x);',
+'  vec2 position = rotatedPos + translation;',
+'  fragColor = vertColor;',
+'  gl_Position = vec4(position, 0.0, 1.0);',
+'}'
+].join('\n');
+
+let fragmentShaderText =
+[
+'precision mediump float;',
+'',
+'varying vec3 fragColor;',
+'void main()',
+'{',
+'  gl_FragColor = vec4(fragColor, 1.0);',
+'}'
+].join('\n');
+
+let canvas, gl, bufferData, rectanglesToRender, cloudMovement = 1;
+let cloudX = -0.7;
+let cloudY = 0.8;
+let cloudSpeed = 0.02;
+let angleInDegr = 0;
+
+let lowColor = [1.0, 0.1, 0.0];
+let highColor = [1.0, 0.2, 0.0];
+
+function initWebGL() {
+	canvas = document.getElementById('canvas');
+	gl = canvas.getContext('webgl');
+
+	if (!gl) {
+		console.log('WebGL not supported, falling back on experimental-webgl');
+		gl = canvas.getContext('experimental-webgl');
+	}
+
+	if (!gl) {
+		alert('Your browser does not support WebGL');
+	}
+	gl.clearColor(0.0, 0.85, 1.0, 1.0);
+}
+
+function initShaders(gl, program) {
+    let vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+	gl.shaderSource(vertexShader, vertexShaderText);
+	gl.shaderSource(fragmentShader, fragmentShaderText);
+
+	gl.compileShader(vertexShader);
+	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+		console.error('ERROR compiling vertex shader!', gl.getShaderInfoLog(vertexShader));
+		return;
+	}
+
+	gl.compileShader(fragmentShader);
+	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+		console.error('ERROR compiling fragment shader!', gl.getShaderInfoLog(fragmentShader));
+		return;
+	}
+
+	gl.attachShader(program, vertexShader);
+	gl.attachShader(program, fragmentShader);
+	gl.linkProgram(program);
+	if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+		console.error('ERROR linking program!', gl.getProgramInfoLog(program));
+		return;
+	}
+	gl.validateProgram(program);
+	if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+		console.error('ERROR validating program!', gl.getProgramInfoLog(program));
+		return;
+	}
+}
+
+function setRectangle(x, y, width, height, ...color) {
+	rectanglesToRender++;
+	var x1 = x;
+	var x2 = x + width;
+	var y1 = y;
+	var y2 = y + height;
+    bufferData.push(
+		x1, y1, color[0], color[1], color[2],
+		x1, y2, color[0], color[1], color[2],
+		x2, y2, color[0], color[1], color[2],
+
+		x1, y1, color[0], color[1], color[2],
+		x2, y1, color[0], color[1], color[2],
+		x2, y2, color[0], color[1], color[2]
+		);
+}
+
+function setCircle(xCenterOfCircle, yCenterOfCircle, radiusOfCircle, decRad, ...color)
+{
+	let noOfFans = 80;
+    let anglePerFan = (2*Math.PI) / noOfFans;
+    bufferData.push(xCenterOfCircle, yCenterOfCircle, color[0], color[1], color[2]);
+    for(let i = 0; i <= noOfFans; i++)
+    {
+        let angle = anglePerFan * (i + 1);
+        let xCoordinate = xCenterOfCircle + Math.cos(angle) * radiusOfCircle;
+        let yCoordinate = yCenterOfCircle + Math.sin(angle) * (radiusOfCircle - decRad);
+        bufferData.push(xCoordinate, yCoordinate, color[0], color[1], color[2]);
+   }
+}
+
+function drawPipe(){
+	setRectangle(-0.5, -0, 0.12, -0.2, 0.0, 1.0, 0.0);
+	setRectangle(-0.53, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
+	setRectangle(-0.53, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
+}
+
+function main() {
+    // инициализация
+	initWebGL();
+    let program = gl.createProgram();
+    initShaders(gl, program);
+	let VertexBufferObject = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, VertexBufferObject);
+
+	let positionAttribLocation = gl.getAttribLocation(program, 'vertPosition');
+	let colorAttribLocation = gl.getAttribLocation(program, 'vertColor');
+	let translationLocation = gl.getUniformLocation(program, "translation");
+	let rotateLocation = gl.getUniformLocation(program, "rotation");
+	
+	gl.vertexAttribPointer(
+		positionAttribLocation, // Attribute location
+		2, // Number of elements per attribute
+		gl.FLOAT, // Type of elements
+		gl.FALSE,
+		5 * Float32Array.BYTES_PER_ELEMENT, // Size of an individual vertex
+		0 // Offset from the beginning of a single vertex to this attribute
+	);
+	gl.vertexAttribPointer(
+		colorAttribLocation, // Attribute location
+		3, // Number of elements per attribute
+		gl.FLOAT, // Type of elements
+		gl.FALSE,
+		5 * Float32Array.BYTES_PER_ELEMENT, // Size of an individual vertex
+		2 * Float32Array.BYTES_PER_ELEMENT // Offset from the beginning of a single vertex to this attribute
+	);
+	
+	gl.useProgram(program);
+	
+	gl.enableVertexAttribArray(colorAttribLocation);
+	gl.enableVertexAttribArray(positionAttribLocation);
+	
+	if (cloudX > 0.79) cloudMovement = -1;
+	if (cloudX < -0.79) cloudMovement = 1;
+	cloudX += cloudSpeed * cloudMovement;
+
+	bufferData = [];
+	rectanglesToRender = 0;
+
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		//			  x,   y,   width,height,  ...color
+	//платформа
+	//setRectangle(-1.0, -0.8, 2.0, -0.2, 0.7, 0.4, 0.0);
+	//труба левая
+	drawPipe();
+	setRectangle(-0.0, -0, 0.12, -0.2, 0.0, 1.0, 0.0);
+	setRectangle(-0.03, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
+	setRectangle(-0.03, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
+	//gl.Rotate
+	//ботинки
+	
+	setRectangle(-0.5, -0.75, 0.08, -0.05, 0.0, 0.0, 0.0);
+	setRectangle(-0.4, -0.75, 0.08, -0.05, 0.0, 0.0, 0.0);
+	//ноги
+	setRectangle(-0.5, -0.6, 0.08, -0.15, 0.0, 0.0, 1.0);
+	setRectangle(-0.4, -0.6, 0.08, -0.15, 0.0, 0.0, 1.0);
+	setRectangle(-0.5, -0.55, 0.18, -0.05, 0.0, 0.0, 1.0);
+	//туловище
+	setRectangle(-0.5, -0.35, 0.18, -0.2, 1.0, 0.9, 0.8);
+	setRectangle(-0.6, -0.35, 0.1, -0.07, 1.0, 0.9, 0.8);
+	setRectangle(-0.32, -0.35, 0.05, -0.17, 1.0, 0.9, 0.8);
+	setRectangle(-0.43, -0.32, 0.05, -0.03, 1.0, 0.9, 0.8);
+	//голова
+	setRectangle(-0.44, -0.24, 0.07, -0.08, 1.0, 0.9, 0.8);
+	setRectangle(-0.44, -0.20, 0.07, -0.04, 1.0, 0.0, 0.0);
+	setRectangle(-0.37, -0.22, 0.03, -0.02, 1.0, 0.0, 0.0);
+	setRectangle(-0.40, -0.25, 0.01, -0.02, 0.0, 0.0, 0.0);
+	setRectangle(-0.38, -0.25, 0.01, -0.02, 0.0, 0.0, 0.0);
+	//молотов
+	setRectangle(-0.63, -0.35, 0.03, -0.07, 0.0, 0.2, 0.1);
+	setRectangle(-0.622, -0.33, 0.015, -0.02, 0.0, 0.2, 0.1);
+	setRectangle(-0.62, -0.31, 0.01, -0.02, lowColor[0], lowColor[1], lowColor[2]);
+	setRectangle(-0.63, -0.30, 0.02, -0.01, highColor[0], highColor[1], highColor[2]);
+	let tmp = lowColor;
+	lowColor = highColor;
+	highColor = tmp;
+	//нож
+	setRectangle(-0.32, -0.52, 0.05, -0.03, 0.0, 0.0, 0.0);
+	setRectangle(-0.27, -0.51, 0.01, -0.05, 0.5, 0.5, 0.5);
+	setRectangle(-0.26, -0.525, 0.05, -0.02, 1.0, 1.0, 1.0);
+	//облако
+	/*
+	let eyePoint = 0;
+	if (cloudMovement == -1) eyePoint = 0.15;
+	setCircle(cloudX, cloudY, 0.2, 0.11, 1.0, 1.0, 1.0);
+	setCircle(cloudX + 0.1 - eyePoint, cloudY, 0.02, 0.0, 0.0, 0.0, 0.0);
+	setCircle(cloudX + 0.05 - eyePoint, cloudY, 0.02, 0.0, 0.0, 0.0, 0.0);*/
+	//прорисовка
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bufferData), gl.STATIC_DRAW);
+	let translation = [0, 1];
+	angleInDegr += 4;
+	let angle = angleInDegr * Math.PI / 180;
+	let cosB = Math.sin(angle);
+	let sinB = Math.cos(angle);
+	//gl.uniform2fv(translationLocation, translation);
+	gl.uniform2f(rotateLocation, cosB, sinB);
+	gl.drawArrays(gl.TRIANGLES, 0, 30);
+	gl.uniform2f(rotateLocation, 0, 1);
+	gl.drawArrays(gl.TRIANGLES, 36, rectanglesToRender*6);
+	//gl.drawArrays(gl.TRIANGLE_FAN, rectanglesToRender*6, bufferData.length / 5 - rectanglesToRender*6 - 82 * 2);
+	//gl.drawArrays(gl.TRIANGLE_FAN, rectanglesToRender*6 + 83, bufferData.length / 5 - rectanglesToRender*6 - 82 * 2);
+	//gl.drawArrays(gl.TRIANGLE_FAN, rectanglesToRender*6 + 82 * 2 + 1, bufferData.length / 5 - rectanglesToRender*6);
+};
+setInterval(main, 20);
