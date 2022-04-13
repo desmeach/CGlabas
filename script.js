@@ -7,11 +7,13 @@ let vertexShaderText =
 'attribute vec3 vertColor;',
 'uniform vec2 translation;',
 'uniform vec2 rotation;',
+'uniform vec2 scale;',
 'varying vec3 fragColor;',
 '',
 'void main()',
 '{',
-'  vec2 rotatedPos = vec2(vertPosition.x * rotation.y + vertPosition.y * rotation.x, vertPosition.y * rotation.y - vertPosition.x * rotation.x);',
+'  vec2 scaledPosition = vertPosition * scale;',
+'  vec2 rotatedPos = vec2(scaledPosition.x * rotation.y + scaledPosition.y * rotation.x, scaledPosition.y * rotation.y - scaledPosition.x * rotation.x);',
 '  vec2 position = rotatedPos + translation;',
 '  fragColor = vertColor;',
 '  gl_Position = vec4(position, 0.0, 1.0);',
@@ -34,6 +36,8 @@ let cloudX = -0.7;
 let cloudY = 0.8;
 let cloudSpeed = 0.02;
 let angleInDegr = 0;
+
+let negMov = 1;
 
 let lowColor = [1.0, 0.1, 0.0];
 let highColor = [1.0, 0.2, 0.0];
@@ -114,13 +118,54 @@ function setCircle(xCenterOfCircle, yCenterOfCircle, radiusOfCircle, decRad, ...
         let xCoordinate = xCenterOfCircle + Math.cos(angle) * radiusOfCircle;
         let yCoordinate = yCenterOfCircle + Math.sin(angle) * (radiusOfCircle - decRad);
         bufferData.push(xCoordinate, yCoordinate, color[0], color[1], color[2]);
-   }
+  	}
+	return 410;
 }
 
 function drawPipe(){
-	setRectangle(-0.5, -0, 0.12, -0.2, 0.0, 1.0, 0.0);
-	setRectangle(-0.53, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
-	setRectangle(-0.53, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
+	let count = rectanglesToRender;
+	setRectangle(-0.0, -0, 0.12, -0.2, 0.0, 1.0, 0.0);
+	setRectangle(-0.03, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
+	setRectangle(-0.03, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
+	return (rectanglesToRender - count)*6;
+}
+
+function drawPlayer(){
+	let count = rectanglesToRender;
+	//ботинки
+	setRectangle(0.0, 0.0, 0.06, -0.05, 0.0, 0.0, 0.0);
+	setRectangle(-0.08, 0.0, 0.06, -0.05, 0.0, 0.0, 0.0);
+	//ноги
+	setRectangle(0.0, 0.0, 0.06, 0.15, 0.0, 0.0, 1.0);
+	setRectangle(-0.08, 0.0, 0.06, 0.15, 0.0, 0.0, 1.0);
+	setRectangle(-0.08, 0.2, 0.14, -0.05, 0.3, 0.4, 1.0);
+	//туловище
+	setRectangle(-0.08, 0.4, 0.14, -0.2, 1.0, 0.9, 0.8);
+	setRectangle(-0.03, 0.4, 0.05, 0.03, 1.0, 0.9, 0.8);
+	//руки
+	setRectangle(0.06, 0.4, 0.04, -0.17, 1.0, 0.9, 0.8);
+	setRectangle(0.06, 0.23, 0.04, -0.04, 0.5, 0.2, 0.2);
+	//голова
+	setRectangle(-0.04, 0.5, 0.07, -0.08, 1.0, 0.9, 0.8);
+	setRectangle(-0.04, 0.53, 0.07, -0.04, 1.0, 0.0, 0.0);
+	setRectangle(0.03, 0.51, 0.03, -0.02, 1.0, 0.0, 0.0);
+	setRectangle(0.0, 0.48, 0.01, -0.02, 0.0, 0.0, 0.0);
+	setRectangle(0.02, 0.48, 0.01, -0.02, 0.0, 0.0, 0.0);
+	//нож
+	setRectangle(0.06, 0.22, 0.04, -0.02, 0.0, 0.0, 0.0);
+	setRectangle(0.1, 0.235, 0.01, -0.05, 0.5, 0.5, 0.5);
+	setRectangle(0.11, 0.22, 0.05, -0.02, 1.0, 1.0, 1.0);
+	//рука левая анимация
+	setRectangle(0.0, 0.0, -0.1, 0.05, 1.0, 0.9, 0.8);
+	//молотов
+	setRectangle(-0.13, 0.05, 0.03, -0.07, 0.0, 0.2, 0.1);
+	setRectangle(-0.123, 0.07, 0.015, -0.02, 0.0, 0.2, 0.1);
+	setRectangle(-0.123, 0.09, 0.01, -0.02, lowColor[0], lowColor[1], lowColor[2]);
+	setRectangle(-0.133, 0.09, 0.02, -0.01, highColor[0], highColor[1], highColor[2]);
+	let tmp = lowColor;
+	lowColor = highColor;
+	highColor = tmp;
+	return (rectanglesToRender - count)*6
 }
 
 function main() {
@@ -135,6 +180,7 @@ function main() {
 	let colorAttribLocation = gl.getAttribLocation(program, 'vertColor');
 	let translationLocation = gl.getUniformLocation(program, "translation");
 	let rotateLocation = gl.getUniformLocation(program, "rotation");
+	let scaleLocation = gl.getUniformLocation(program, "scale");
 	
 	gl.vertexAttribPointer(
 		positionAttribLocation, // Attribute location
@@ -158,6 +204,8 @@ function main() {
 	gl.enableVertexAttribArray(colorAttribLocation);
 	gl.enableVertexAttribArray(positionAttribLocation);
 	
+	let rendered = 0;
+
 	if (cloudX > 0.79) cloudMovement = -1;
 	if (cloudX < -0.79) cloudMovement = 1;
 	cloudX += cloudSpeed * cloudMovement;
@@ -166,67 +214,61 @@ function main() {
 	rectanglesToRender = 0;
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		//			  x,   y,   width,height,  ...color
+	//			  x,   y,   width,height,  ...color
 	//платформа
-	//setRectangle(-1.0, -0.8, 2.0, -0.2, 0.7, 0.4, 0.0);
+	setRectangle(0.0, 0.0, 2.0, -0.2, 0.7, 0.4, 0.0);
 	//труба левая
-	drawPipe();
-	setRectangle(-0.0, -0, 0.12, -0.2, 0.0, 1.0, 0.0);
-	setRectangle(-0.03, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
-	setRectangle(-0.03, 0.05, 0.18, -0.1, 0.0, 1.0, 0.0);
-	//gl.Rotate
-	//ботинки
-	
-	setRectangle(-0.5, -0.75, 0.08, -0.05, 0.0, 0.0, 0.0);
-	setRectangle(-0.4, -0.75, 0.08, -0.05, 0.0, 0.0, 0.0);
-	//ноги
-	setRectangle(-0.5, -0.6, 0.08, -0.15, 0.0, 0.0, 1.0);
-	setRectangle(-0.4, -0.6, 0.08, -0.15, 0.0, 0.0, 1.0);
-	setRectangle(-0.5, -0.55, 0.18, -0.05, 0.0, 0.0, 1.0);
-	//туловище
-	setRectangle(-0.5, -0.35, 0.18, -0.2, 1.0, 0.9, 0.8);
-	setRectangle(-0.6, -0.35, 0.1, -0.07, 1.0, 0.9, 0.8);
-	setRectangle(-0.32, -0.35, 0.05, -0.17, 1.0, 0.9, 0.8);
-	setRectangle(-0.43, -0.32, 0.05, -0.03, 1.0, 0.9, 0.8);
-	//голова
-	setRectangle(-0.44, -0.24, 0.07, -0.08, 1.0, 0.9, 0.8);
-	setRectangle(-0.44, -0.20, 0.07, -0.04, 1.0, 0.0, 0.0);
-	setRectangle(-0.37, -0.22, 0.03, -0.02, 1.0, 0.0, 0.0);
-	setRectangle(-0.40, -0.25, 0.01, -0.02, 0.0, 0.0, 0.0);
-	setRectangle(-0.38, -0.25, 0.01, -0.02, 0.0, 0.0, 0.0);
-	//молотов
-	setRectangle(-0.63, -0.35, 0.03, -0.07, 0.0, 0.2, 0.1);
-	setRectangle(-0.622, -0.33, 0.015, -0.02, 0.0, 0.2, 0.1);
-	setRectangle(-0.62, -0.31, 0.01, -0.02, lowColor[0], lowColor[1], lowColor[2]);
-	setRectangle(-0.63, -0.30, 0.02, -0.01, highColor[0], highColor[1], highColor[2]);
-	let tmp = lowColor;
-	lowColor = highColor;
-	highColor = tmp;
-	//нож
-	setRectangle(-0.32, -0.52, 0.05, -0.03, 0.0, 0.0, 0.0);
-	setRectangle(-0.27, -0.51, 0.01, -0.05, 0.5, 0.5, 0.5);
-	setRectangle(-0.26, -0.525, 0.05, -0.02, 1.0, 1.0, 1.0);
+	let pipeCount = drawPipe();
 	//облако
-	/*
 	let eyePoint = 0;
 	if (cloudMovement == -1) eyePoint = 0.15;
-	setCircle(cloudX, cloudY, 0.2, 0.11, 1.0, 1.0, 1.0);
-	setCircle(cloudX + 0.1 - eyePoint, cloudY, 0.02, 0.0, 0.0, 0.0, 0.0);
-	setCircle(cloudX + 0.05 - eyePoint, cloudY, 0.02, 0.0, 0.0, 0.0, 0.0);*/
+	let circleCount = setCircle(0, 0, 0.3, 0.11, 1.0, 1.0, 1.0);
+	//circleCount += setCircle(cloudX + 0.1 - eyePoint, cloudY, 0.02, 0.0, 0.0, 0.0, 0.0);
+	//circleCount += setCircle(cloudX + 0.05 - eyePoint, cloudY, 0.02, 0.0, 0.0, 0.0, 0.0);
+	//let firstPlayerCount = drawPlayer();
+	//let secondPlayerCount = drawPlayer();
 	//прорисовка
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(bufferData), gl.STATIC_DRAW);
-	let translation = [0, 1];
-	angleInDegr += 4;
-	let angle = angleInDegr * Math.PI / 180;
+
+	if (angleInDegr > 30)
+		negMov = -1;
+	if (angleInDegr < 0.2)
+		negMov = 1;
+	angleInDegr += 4 * negMov;
+	
+
+	setAtrib(0, [-1.0, -0.8], [1, 1], rotateLocation, translationLocation, scaleLocation);
+	gl.drawArrays(gl.TRIANGLES, 0, 6);
+	rendered += 6;
+	setAtrib(0, [-0.8, -0.6], [1, 1], rotateLocation, translationLocation, scaleLocation);
+	gl.drawArrays(gl.TRIANGLES, rendered, pipeCount);
+	rendered += pipeCount;
+	setAtrib(0, [0, 0], [1, 1], rotateLocation, translationLocation, scaleLocation);
+	gl.drawArrays(gl.TRIANGLES, rendered, circleCount*3);
+	rendered += circleCount;
+	// setAtrib(0, [-0.4, -0.75], [1, 1], rotateLocation, translationLocation, scaleLocation);
+	// gl.drawArrays(gl.TRIANGLES, rendered, firstPlayerCount - 30);
+	// rendered += firstPlayerCount - 30;
+	// setAtrib(angleInDegr, [-0.48, -0.4], [1, 1], rotateLocation, translationLocation, scaleLocation);
+	// gl.drawArrays(gl.TRIANGLES, rendered, 30);
+	// rendered += 30;
+	// setAtrib(0, [0, -0.775], [0.5, 0.5], rotateLocation, translationLocation, scaleLocation);
+	// gl.drawArrays(gl.TRIANGLES, rendered, secondPlayerCount - 30);
+	// rendered += secondPlayerCount - 30;
+	// setAtrib(0, [-0.04, -0.6], [0.5, 0.5], rotateLocation, translationLocation, scaleLocation);
+	// gl.drawArrays(gl.TRIANGLES, rendered, 30);
+};
+
+function setAtrib(angleDeg, translation, scale, ...atrib){
+	//set rotation
+	let angle = angleDeg * Math.PI / 180;
 	let cosB = Math.sin(angle);
 	let sinB = Math.cos(angle);
-	//gl.uniform2fv(translationLocation, translation);
-	gl.uniform2f(rotateLocation, cosB, sinB);
-	gl.drawArrays(gl.TRIANGLES, 0, 30);
-	gl.uniform2f(rotateLocation, 0, 1);
-	gl.drawArrays(gl.TRIANGLES, 36, rectanglesToRender*6);
-	//gl.drawArrays(gl.TRIANGLE_FAN, rectanglesToRender*6, bufferData.length / 5 - rectanglesToRender*6 - 82 * 2);
-	//gl.drawArrays(gl.TRIANGLE_FAN, rectanglesToRender*6 + 83, bufferData.length / 5 - rectanglesToRender*6 - 82 * 2);
-	//gl.drawArrays(gl.TRIANGLE_FAN, rectanglesToRender*6 + 82 * 2 + 1, bufferData.length / 5 - rectanglesToRender*6);
-};
-setInterval(main, 20);
+	//set translation
+	gl.uniform2fv(atrib[1], translation);
+	gl.uniform2f(atrib[0], cosB, sinB);
+	//set scaling
+	gl.uniform2fv(atrib[2], scale);
+}
+
+setInterval(main, 100);
