@@ -32,9 +32,6 @@ let fragmentShaderText =
 ].join('\n');
 
 let canvas, gl, bufferData, rectanglesToRender, cloudMovement = 1;
-let cloudX = -0.7;
-let cloudY = 0.8;
-let cloudSpeed = 0.02;
 let angleInDegr = 0;
 
 let negMov = 1;
@@ -105,21 +102,6 @@ function setRectangle(x, y, width, height, ...color) {
 		x2, y1, color[0], color[1], color[2],
 		x2, y2, color[0], color[1], color[2]
 		);
-}
-
-function setCircle(xCenterOfCircle, yCenterOfCircle, radiusOfCircle, decRad, ...color)
-{
-	let noOfFans = 80;
-    let anglePerFan = (2*Math.PI) / noOfFans;
-    bufferData.push(xCenterOfCircle, yCenterOfCircle, color[0], color[1], color[2]);
-    for(let i = 0; i <= noOfFans; i++)
-    {
-        let angle = anglePerFan * (i + 1);
-        let xCoordinate = xCenterOfCircle + Math.cos(angle) * radiusOfCircle;
-        let yCoordinate = yCenterOfCircle + Math.sin(angle) * (radiusOfCircle - decRad);
-        bufferData.push(xCoordinate, yCoordinate, color[0], color[1], color[2]);
-  	}
-	return 82;
 }
 
 function drawPipe(){
@@ -206,10 +188,6 @@ function main() {
 	
 	let rendered = 0;
 
-	if (cloudX > 0.79) cloudMovement = -1;
-	if (cloudX < -0.79) cloudMovement = 1;
-	cloudX += cloudSpeed * cloudMovement;
-
 	bufferData = [];
 	rectanglesToRender = 0;
 
@@ -219,11 +197,6 @@ function main() {
 	setRectangle(0.0, 0.0, 2.0, -0.2, 0.7, 0.4, 0.0);
 	//труба левая
 	let pipeCount = drawPipe();
-	//облако
-	let eyePoint = 0;
-	if (cloudMovement == -1) eyePoint = 0.15;
-	let circleCount = setCircle(0, 0, 0.3, 0.11, 1.0, 1.0, 1.0);
-	let circleCount2 = setCircle(0, 0, 0.2, 0.11, 1.0, 1.0, 1.0);
 	let pipe2Count = drawPipe();
 	let firstPlayerCount = drawPlayer();
 	let secondPlayerCount = drawPlayer();
@@ -236,19 +209,12 @@ function main() {
 		negMov = 1;
 	angleInDegr += 4 * negMov;
 	
-
 	setAtrib(0, [-1.0, -0.8], [1, 1], rotateLocation, translationLocation, scaleLocation);
 	gl.drawArrays(gl.TRIANGLES, 0, 6);
 	rendered += 6;
 	setAtrib(0, [-0.8, -0.6], [1, 1], rotateLocation, translationLocation, scaleLocation);
 	gl.drawArrays(gl.TRIANGLES, rendered, pipeCount);
 	rendered += pipeCount;
-	setAtrib(0, [cloudX, cloudY], [0.8, 0.8], rotateLocation, translationLocation, scaleLocation);
-	gl.drawArrays(gl.TRIANGLE_FAN, rendered, circleCount);
-	rendered += circleCount;
-	setAtrib(0, [cloudX + 0.3, cloudY - 0.3], [1, 1], rotateLocation, translationLocation, scaleLocation);
-	gl.drawArrays(gl.TRIANGLE_FAN, rendered, circleCount2);
-	rendered += circleCount2;
 	setAtrib(180, [0.5, -0.7], [2, 2], rotateLocation, translationLocation, scaleLocation);
 	gl.drawArrays(gl.TRIANGLES, rendered, pipe2Count);
 	rendered += pipe2Count;
