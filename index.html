@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Lab Graphics</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js">
+    </script>
+    <script src="webgl.js" defer></script>
+  </head>
+  <body>
+	<div>
+	<label for="rotate">Rotate</label>
+  <input type="range" id="slider_r" name="rotate" min="-720" max="720">
+  <label for="axisZ">AxisZ</label>
+  <input type="range" id="slider_z" name="axisZ" value="500" min="0" max="1000">
+	</div>
+    <canvas id="glcanvas" width="1000" height="600"></canvas>
+  </body>
+</html>
